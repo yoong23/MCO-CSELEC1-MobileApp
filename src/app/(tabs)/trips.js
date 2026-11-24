@@ -14,23 +14,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTrip } from '../../context/TripContext';
 
 export default function Trips() {
-  const { trip, setTrip, clearTrip } = useTrip();
+  const { trip, setTrip, clearTrip, loading } = useTrip();
 
-  const [destination, setDestination] = useState(
-    trip.destination || ''
-  );
+  const [destination, setDestination] = useState(trip.destination || '');
 
-  const [startDate, setStartDate] = useState(
-    trip.startDate ? new Date(trip.startDate) : null
-  );
+  const [startDate, setStartDate] = useState(trip.startDate ? new Date(trip.startDate) : null);
 
-  const [endDate, setEndDate] = useState(
-    trip.endDate ? new Date(trip.endDate) : null
-  );
+  const [endDate, setEndDate] = useState(trip.endDate ? new Date(trip.endDate) : null );
 
-  const [transport, setTransport] = useState(
-    trip.transport || ''
-  );
+  const [transport, setTransport] = useState(trip.transport || '');
 
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
@@ -40,15 +32,12 @@ export default function Trips() {
   const [activityTime, setActivityTime] = useState(new Date());
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const [itinerary, setItinerary] = useState(
-    trip.itinerary || []
-  );
+  const [itinerary, setItinerary] = useState(trip.itinerary || []);
 
   // PACKING LIST
   const [packingItem, setPackingItem] = useState('');
-  const [packingList, setPackingList] = useState(
-    trip.packingList || []
-  );
+  const [packingList, setPackingList] = useState(trip.packingList || []);
+
 
   // ADD ACTIVITY
   const addActivity = () => {
@@ -269,7 +258,7 @@ export default function Trips() {
               ? 'spinner'
               : 'default'
           }
-          onValueChange={(event, date) => {
+          onChange={(event, date) => {
             setShowStartPicker(false);
 
             if (date) {
@@ -290,7 +279,7 @@ export default function Trips() {
               ? 'spinner'
               : 'default'
           }
-          onValueChange={(event, date) => {
+          onChange={(event, date) => {
             setShowEndPicker(false);
 
             if (date) {
@@ -415,7 +404,7 @@ export default function Trips() {
               ? 'spinner'
               : 'default'
           }
-          onValueChange={(event, date) => {
+          onChange={(event, date) => {
             setShowTimePicker(false);
 
             if (date) {

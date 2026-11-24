@@ -164,7 +164,7 @@ export default function Home() {
         {/* MY TRIPS */}
         <TouchableOpacity
           style={styles.actionCard}
-          onPress={() => router.push('/(tabs)/trips')}
+          onPress={() => router.push('/(tabs)/trip-details')}
         >
           <Text style={styles.actionIcon}>
             🧳

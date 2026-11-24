@@ -90,6 +90,7 @@ export function TripProvider({ children }) {
         trip,
         setTrip,
         clearTrip,
+        loading,
       }}
     >
       {children}

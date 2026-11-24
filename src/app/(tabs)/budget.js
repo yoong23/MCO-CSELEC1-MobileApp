@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ const categories = [
   { name: 'Food' },
   { name: 'Activities' },
 ];
+const BUDGET_STORAGE_KEY = '@travel_budget_v1';
 
 export default function Budget() {
   const [totalBudget, setTotalBudget] = useState('');
@@ -23,6 +25,59 @@ export default function Budget() {
     Food: '',
     Activities: '',
   });
+
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+  loadBudget();
+}, []);
+
+useEffect(() => {
+  if (!loading) {
+    saveBudget();
+  }
+}, [totalBudget, expenses, loading]);
+
+const loadBudget = async () => {
+  try {
+    const savedBudget = await AsyncStorage.getItem(
+      BUDGET_STORAGE_KEY
+    );
+
+    if (savedBudget !== null) {
+      const parsedBudget = JSON.parse(savedBudget);
+
+      setTotalBudget(parsedBudget.totalBudget || '');
+
+      setExpenses({
+        Transportation: parsedBudget.expenses?.Transportation || '',
+        Accommodation: parsedBudget.expenses?.Accommodation || '',
+        Food: parsedBudget.expenses?.Food || '',
+        Activities: parsedBudget.expenses?.Activities || '',
+      });
+    }
+  } catch (error) {
+    console.log('Error loading budget:', error);
+  } finally {
+    setLoading(false);
+  }
+};
+
+const saveBudget = async () => {
+  try {
+    const budgetData = {
+      totalBudget,
+      expenses,
+    };
+
+    await AsyncStorage.setItem(
+      BUDGET_STORAGE_KEY,
+      JSON.stringify(budgetData)
+    );
+  } catch (error) {
+    console.log('Error saving budget:', error);
+  }
+};
 
   const updateExpense = (category, value) => {
     setExpenses({

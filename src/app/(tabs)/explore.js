@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -84,9 +84,112 @@ const destinations = [
 
 const categories = ['All', 'Nature', 'Beaches', 'City', 'Foods'];
 
+const getWeatherDescription = (code) => {
+  if (code === 0) return 'Clear sky';
+  if ([1, 2, 3].includes(code)) return 'Partly cloudy';
+  if ([45, 48].includes(code)) return 'Foggy';
+  if ([51, 53, 55, 56, 57].includes(code)) return 'Drizzle';
+  if ([61, 63, 65, 66, 67].includes(code)) return 'Rainy';
+  if ([71, 73, 75, 77].includes(code)) return 'Snowfall';
+  if ([80, 81, 82].includes(code)) return 'Rain showers';
+  if ([85, 86].includes(code)) return 'Snow showers';
+  if ([95, 96, 99].includes(code)) return 'Thunderstorm';
+
+  return 'Weather information available';
+};
+
 export default function Explore() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [search, setSearch] = useState('');
+
+  const [weather, setWeather] = useState(null);
+  const [weatherLoading, setWeatherLoading] = useState(true);
+  const [weatherError, setWeatherError] = useState(null);
+  const [weatherRefresh, setWeatherRefresh] = useState(0);
+
+useEffect(() => {
+  const controller = new AbortController();
+
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, 15000);
+
+  const fetchWeather = async () => {
+    try {
+      setWeatherLoading(true);
+      setWeatherError('');
+      setWeather(null);
+
+      const response = await fetch(
+        'https://api.open-meteo.com/v1/forecast?latitude=10.3157&longitude=123.8854&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia%2FManila',
+        { signal: controller.signal }
+      );
+
+      if (!response.ok) {
+        throw new Error('Unable to fetch weather data.');
+      }
+
+      const data = await response.json();
+
+      if (!data.current) {
+        throw new Error('Weather information is unavailable.');
+      }
+
+      setWeather(data.current);
+
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        setWeatherError('Weather request timed out. Please try again.');
+      } else {
+        console.log('Weather API Error:', error);
+        setWeatherError(
+          'Unable to load weather. Please check your internet connection.'
+        );
+      }
+
+    } finally {
+      clearTimeout(timeout);
+      setWeatherLoading(false);
+    }
+  };
+
+  fetchWeather();
+
+  return () => {
+    clearTimeout(timeout);
+    controller.abort();
+  };
+
+}, [weatherRefresh]);
+
+const fetchWeather = async (signal) => {
+  try {
+    setWeatherLoading(true);
+    setWeatherError('');
+
+    const response = await fetch(
+      'https://api.open-meteo.com/v1/forecast?latitude=10.3157&longitude=123.8854&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m&timezone=Asia%2FManila',
+      { signal }
+    );
+
+    if (!response.ok) {
+      throw new Error('Unable to fetch weather data.');
+    }
+
+    const data = await response.json();
+
+    setWeather(data.current);
+  } catch (error) {
+  if (error.name !== 'AbortError') {
+    console.log('Weather API Error:', error);
+    setWeatherError('Unable to load weather. Please check your internet connection.');
+  }
+} finally {
+  if (!signal.aborted) {
+    setWeatherLoading(false);
+  }
+}
+};
 
   const filteredDestinations = destinations.filter((destination) => {
     const matchesCategory =
@@ -145,6 +248,75 @@ export default function Explore() {
           ))}
         </ScrollView>
       </View>
+
+<View style={styles.weatherCard}>
+  <View style={styles.weatherHeader}>
+    <Text style={styles.weatherTitle}>
+      Cebu Current Weather
+    </Text>
+
+    <TouchableOpacity
+      style={styles.weatherRefreshButton}
+      onPress={() => setWeatherRefresh(prev => prev + 1)}
+      disabled={weatherLoading}
+    >
+      <Text style={styles.weatherRefreshText}>
+        {weatherLoading ? 'Refreshing...' : '↻ Refresh'}
+      </Text>
+    </TouchableOpacity>
+  </View>
+
+  {weather && (
+    <Text style={styles.weatherText}>
+      Weather data time: {new Date(weather.time).toLocaleTimeString('en-PH', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+        timeZone: 'Asia/Manila'
+      })}
+    </Text>
+  )}
+
+  {weatherLoading ? (
+    <Text style={styles.weatherText}>
+      Loading weather information...
+    </Text>
+  ) : weatherError ? (
+    <Text style={styles.weatherError}>
+      {weatherError}
+    </Text>
+  ) : weather ? (
+    <>
+      <View style={styles.weatherMain}>
+        <Text style={styles.weatherTemperature}>
+          {Math.round(weather.temperature_2m)}°C
+        </Text>
+
+        <View style={styles.weatherDetails}>
+          <Text style={styles.weatherCondition}>
+            {getWeatherDescription(weather.weather_code)}
+          </Text>
+
+          <Text style={styles.weatherText}>
+            Feels like {Math.round(weather.apparent_temperature)}°C
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.weatherDivider} />
+
+      <View style={styles.weatherStats}>
+        <Text style={styles.weatherText}>
+          Humidity: {weather.relative_humidity_2m}%
+        </Text>
+
+        <Text style={styles.weatherText}>
+          Wind: {weather.wind_speed_10m} km/h
+        </Text>
+      </View>
+    </>
+  ) : null}
+</View>
 
       <Text style={styles.sectionTitle}>
         Popular Destinations
@@ -226,7 +398,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFF9E8',
-  },
+},
+
+weatherHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+
+weatherRefreshButton: {
+  backgroundColor: '#159A68',
+  paddingVertical: 8,
+  paddingHorizontal: 12,
+  borderRadius: 12,
+},
+
+weatherRefreshText: {
+  color: '#FFFFFF',
+  fontSize: 13,
+  fontWeight: 'bold',
+},
+
 
   header: {
     backgroundColor: '#159A68',
@@ -403,4 +595,64 @@ const styles = StyleSheet.create({
     marginTop: 7,
     lineHeight: 21,
   },
+
+  weatherCard: {
+  backgroundColor: '#20C7C7',
+  marginHorizontal: 20,
+  marginTop: 20,
+  padding: 18,
+  borderRadius: 20,
+},
+
+weatherTitle: {
+  color: '#FFFFFF',
+  fontSize: 18,
+  fontWeight: 'bold',
+},
+
+weatherMain: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginTop: 12,
+},
+
+weatherTemperature: {
+  color: '#FFFFFF',
+  fontSize: 42,
+  fontWeight: 'bold',
+},
+
+weatherDetails: {
+  marginLeft: 15,
+},
+
+weatherCondition: {
+  color: '#FFFFFF',
+  fontSize: 17,
+  fontWeight: 'bold',
+},
+
+weatherText: {
+  color: '#FFFFFF',
+  fontSize: 13,
+  marginTop: 5,
+},
+
+weatherError: {
+  color: '#FFFFFF',
+  fontSize: 13,
+  marginTop: 12,
+},
+
+weatherDivider: {
+  height: 1,
+  backgroundColor: '#FFFFFF',
+  opacity: 0.5,
+  marginVertical: 14,
+},
+
+weatherStats: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+},
 });
